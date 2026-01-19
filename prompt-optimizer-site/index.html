@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prompt 优化器</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #f5f5f7;
+            min-height: 100vh;
+            color: #1d1d1f;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 60px 24px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        h1 {
+            font-size: 42px;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, #1d1d1f 0%, #515154 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 18px;
+            color: #86868b;
+            font-weight: 300;
+        }
+
+        .card {
+            background: #ffffff;
+            border-radius: 18px;
+            padding: 32px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .section-label {
+            font-size: 13px;
+            font-weight: 500;
+            color: #86868b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+
+        textarea {
+            width: 100%;
+            border: none;
+            font-size: 17px;
+            font-family: inherit;
+            resize: none;
+            outline: none;
+            color: #1d1d1f;
+            background: transparent;
+            line-height: 1.7;
+        }
+
+        textarea::placeholder {
+            color: #c7c7cc;
+        }
+
+        #input {
+            min-height: 100px;
+        }
+
+        #output {
+            min-height: 200px;
+            background: #fafafa;
+            border-radius: 12px;
+            padding: 20px;
+            font-size: 15px;
+        }
+
+        .options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 24px;
+        }
+
+        .option-btn {
+            padding: 10px 18px;
+            border: 1.5px solid #e5e5ea;
+            border-radius: 100px;
+            background: #ffffff;
+            font-size: 14px;
+            font-weight: 500;
+            color: #1d1d1f;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+
+        .option-btn:hover {
+            border-color: #0071e3;
+            color: #0071e3;
+        }
+
+        .option-btn.active {
+            background: #0071e3;
+            border-color: #0071e3;
+            color: #ffffff;
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .btn-primary {
+            flex: 1;
+            padding: 16px 32px;
+            background: #0071e3;
+            color: #ffffff;
+            border: none;
+            border-radius: 12px;
+            font-size: 17px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+
+        .btn-primary:hover {
+            background: #0077ed;
+            transform: translateY(-1px);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn-primary:disabled {
+            background: #c7c7cc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            padding: 16px 24px;
+            background: transparent;
+            color: #0071e3;
+            border: none;
+            border-radius: 12px;
+            font-size: 17px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(0, 113, 227, 0.1);
+        }
+
+        .result-card {
+            display: none;
+        }
+
+        .result-card.show {
+            display: block;
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .copy-hint {
+            text-align: center;
+            font-size: 14px;
+            color: #86868b;
+            margin-top: 16px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .copy-hint.show {
+            opacity: 1;
+        }
+
+        .tips {
+            margin-top: 48px;
+            padding: 24px;
+            background: rgba(0, 113, 227, 0.05);
+            border-radius: 12px;
+        }
+
+        .tips h3 {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #0071e3;
+        }
+
+        .tips ul {
+            list-style: none;
+            font-size: 14px;
+            color: #515154;
+        }
+
+        .tips li {
+            padding: 6px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .tips li::before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: #0071e3;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 40px 16px;
+            }
+            
+            h1 {
+                font-size: 32px;
+            }
+
+            .card {
+                padding: 24px;
+            }
+
+            .btn-row {
+                flex-direction: column;
+            }
+
+            .btn-secondary {
+                order: 2;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Prompt 优化器</h1>
+            <p class="subtitle">一句话变成高效提示词</p>
+        </header>
+
+        <div class="card">
+            <div class="section-label">选择场景</div>
+            <div class="options">
+                <button class="option-btn active" data-scene="general">通用</button>
+                <button class="option-btn" data-scene="code">写代码</button>
+                <button class="option-btn" data-scene="writing">写文案</button>
+                <button class="option-btn" data-scene="analysis">分析问题</button>
+                <button class="option-btn" data-scene="translate">翻译润色</button>
+                <button class="option-btn" data-scene="image">图片生成</button>
+            </div>
+
+            <div class="section-label">你的想法</div>
+            <textarea id="input" placeholder="例如：帮我写个登录页面"></textarea>
+
+            <div class="btn-row">
+                <button class="btn-primary" id="optimize">优化提示词</button>
+                <button class="btn-secondary" id="clear">清空</button>
+            </div>
+        </div>
+
+        <div class="card result-card" id="result-card">
+            <div class="section-label">优化后的提示词</div>
+            <textarea id="output" readonly></textarea>
+            <p class="copy-hint" id="copy-hint">✓ 已复制到剪贴板</p>
+        </div>
+
+        <div class="tips">
+            <h3>💡 优化原理</h3>
+            <ul>
+                <li><strong>角色设定</strong> — 让 AI 进入专业状态</li>
+                <li><strong>任务明确</strong> — 说清楚要做什么</li>
+                <li><strong>背景补充</strong> — 提供必要上下文</li>
+                <li><strong>格式要求</strong> — 指定输出形式</li>
+                <li><strong>质量标准</strong> — 设定预期水平</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        const templates = {
+            general: {
+                prefix: "请帮我完成以下任务：",
+                structure: (input) => `## 任务
+${input}
+
+## 要求
+1. 请先理解我的核心需求
+2. 如果有不明确的地方，请先提问确认
+3. 分步骤清晰地完成任务
+4. 给出实用、可直接使用的结果
+
+## 输出格式
+请用清晰的结构组织回答，必要时使用示例说明。`
+            },
+            code: {
+                prefix: "作为一名高级开发工程师，请帮我：",
+                structure: (input) => `## 开发任务
+${input}
+
+## 技术要求
+1. 代码需要生产级质量，可直接使用
+2. 包含必要的错误处理和边界情况
+3. 添加关键注释说明设计思路
+4. 遵循最佳实践和代码规范
+
+## 输出要求
+- 完整可运行的代码
+- 简要说明核心逻辑
+- 列出使用的依赖（如有）
+- 提供使用示例`
+            },
+            writing: {
+                prefix: "作为专业文案策划，请帮我：",
+                structure: (input) => `## 写作任务
+${input}
+
+## 文案要求
+1. 目标读者：[请根据内容推断]
+2. 风格调性：专业但不刻板，有温度
+3. 结构清晰，逻辑流畅
+4. 语言精炼，避免空洞套话
+
+## 输出格式
+直接给出成稿，标注可能需要调整的地方。`
+            },
+            analysis: {
+                prefix: "作为资深分析师，请帮我：",
+                structure: (input) => `## 分析任务
+${input}
+
+## 分析框架
+1. 先明确问题的本质是什么
+2. 列出关键影响因素
+3. 从多个角度进行分析
+4. 给出有依据的结论
+
+## 输出要求
+- 结构化呈现分析过程
+- 观点需有逻辑支撑
+- 最后给出可行的建议或决策参考`
+            },
+            translate: {
+                prefix: "作为专业翻译和语言专家，请帮我：",
+                structure: (input) => `## 翻译/润色任务
+${input}
+
+## 要求
+1. 保持原意的同时，使表达更地道
+2. 注意语境和专业术语的准确性
+3. 如果是润色，保留作者风格
+4. 可以提供多个版本供选择
+
+## 输出格式
+- 给出翻译/润色结果
+- 标注关键用词的选择理由
+- 如有多种理解，列出不同版本`
+            },
+            image: {
+                prefix: "作为 AI 绘图提示词专家，请帮我优化：",
+                structure: (input) => `## 图片需求
+${input}
+
+## 请生成包含以下元素的英文提示词：
+1. **主体描述**：清晰描述画面核心内容
+2. **风格定义**：艺术风格、渲染方式
+3. **画面细节**：光影、色调、构图
+4. **质量词**：8k, highly detailed, masterpiece 等
+
+## 输出格式
+提供 1 个完整的英文提示词，可直接用于 Midjourney / Stable Diffusion / DALL-E。`
+            }
+        };
+
+        let currentScene = 'general';
+
+        // 场景选择
+        document.querySelectorAll('.option-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.option-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentScene = btn.dataset.scene;
+            });
+        });
+
+        // 优化按钮
+        document.getElementById('optimize').addEventListener('click', () => {
+            const input = document.getElementById('input').value.trim();
+            if (!input) {
+                document.getElementById('input').placeholder = '请先输入你的想法...';
+                return;
+            }
+
+            const template = templates[currentScene];
+            const optimized = template.structure(input);
+            
+            document.getElementById('output').value = optimized;
+            document.getElementById('result-card').classList.add('show');
+
+            // 自动复制
+            navigator.clipboard.writeText(optimized).then(() => {
+                const hint = document.getElementById('copy-hint');
+                hint.classList.add('show');
+                setTimeout(() => hint.classList.remove('show'), 2000);
+            });
+
+            // 滚动到结果
+            document.getElementById('result-card').scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'center' 
+            });
+        });
+
+        // 清空按钮
+        document.getElementById('clear').addEventListener('click', () => {
+            document.getElementById('input').value = '';
+            document.getElementById('output').value = '';
+            document.getElementById('result-card').classList.remove('show');
+            document.getElementById('input').focus();
+        });
+
+        // 点击输出框也可以复制
+        document.getElementById('output').addEventListener('click', () => {
+            const output = document.getElementById('output');
+            if (output.value) {
+                navigator.clipboard.writeText(output.value).then(() => {
+                    const hint = document.getElementById('copy-hint');
+                    hint.classList.add('show');
+                    setTimeout(() => hint.classList.remove('show'), 2000);
+                });
+            }
+        });
+
+        // 回车快捷键
+        document.getElementById('input').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && e.ctrlKey) {
+                document.getElementById('optimize').click();
+            }
+        });
+    </script>
+</body>
+</html>
